@@ -1,12 +1,16 @@
 version: '3.8'
 
 services:
+  # Example service showing how to use the base image
   warp-terminal:
+    image: ghcr.io/tzervas/warp-term-container:v0.2.0
     build:
       context: .
       args:
         USER_UID: ${UID:-1000}
         USER_GID: ${GID:-1000}
+      # Uncomment to build a custom image
+      # dockerfile: Dockerfile.custom
     volumes:
       # Project volume (if using local project)
       - ${PROJECT_PATH:-./}:/home/warp/project:rw

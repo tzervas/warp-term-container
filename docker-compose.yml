@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  warp-terminal:
+    build:
+      context: .
+      args:
+        USER_UID: ${UID:-1000}
+        USER_GID: ${GID:-1000}
+    volumes:
+      # Project volume (if using local project)
+      - ${PROJECT_PATH:-./}:/home/warp/project:rw
+      # Authentication volumes
+      - ${HOME}/.gitconfig-warp-ai:/home/warp/.gitconfig:ro
+      # Secret-tool socket and keyring
+      - /run/user/${UID:-1000}/keyring:/run/user/${UID:-1000}/keyring:rw
+      - ${HOME}/.local/share/keyrings:/home/warp/.local/share/keyrings:rw
+    environment:
+      - AUTH_METHOD=${AUTH_METHOD:-keyring}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - GPG_KEY=${GPG_KEY}
+      - PROJECT_PATH=${PROJECT_PATH}
+      - ATLASSIAN_TOKEN=${ATLASSIAN_TOKEN}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - CONFLUENCE_DOMAIN=${CONFLUENCE_DOMAIN}
+    init: true
+    command: ["bash", "-c", "chown -R warp:warp /home/warp/.gnupg && exec /home/warp/entrypoint.sh"]
+    tty: true
+    stdin_open: true
+

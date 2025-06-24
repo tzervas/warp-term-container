@@ -55,8 +55,22 @@ Required environment variables can be set in the `.env` file:
 
 ## Usage
 
-Start the development container:
+### Using the Base Image
+
+The base image is available at `ghcr.io/tzervas/warp-term-container` and can be used in two ways:
+
+1. Direct usage with environment variables:
 ```bash
+docker-compose up -d
+```
+
+2. Extending with custom configuration:
+   - Copy `Dockerfile.custom` to your project
+   - Modify it to add your specific configuration
+   - Update `docker-compose.yml` to use your custom Dockerfile
+   - Build and run:
+```bash
+docker-compose build
 docker-compose up -d
 ```
 
@@ -64,6 +78,15 @@ Connect to the container:
 ```bash
 docker-compose exec warp-terminal bash
 ```
+
+### Configuration
+
+The base image expects configuration through:
+- Environment variables in `.env`
+- Mounted volumes for credentials
+- Custom Dockerfile for additional setup
+
+See `Dockerfile.custom` for an example of how to extend the base image with your own configuration.
 
 ## Directory Structure
 

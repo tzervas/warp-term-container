@@ -1,0 +1,27 @@
+# Extend the base Warp Terminal image
+FROM ghcr.io/tzervas/warp-term-container:v0.2.0
+
+USER root
+
+# Add any additional system dependencies
+RUN apt-get update && apt-get install -y \
+    your-package-here \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy your GPG key and setup scripts
+COPY setup-gpg.sh /tmp/setup-gpg.sh
+COPY your-gpg-key.asc /tmp/gpg-key.asc
+RUN chown warp:warp /tmp/setup-gpg.sh /tmp/gpg-key.asc && \
+    chmod +x /tmp/setup-gpg.sh
+
+# Switch back to warp user and setup GPG
+USER warp
+RUN /tmp/setup-gpg.sh && \
+    rm /tmp/setup-gpg.sh /tmp/gpg-key.asc
+
+# Add any additional configuration
+COPY --chown=warp:warp .gitconfig /home/warp/.gitconfig
+COPY --chown=warp:warp your-config-files /home/warp/.config/
+
+# Keep the original entrypoint
+ENTRYPOINT ["/home/warp/entrypoint.sh"]

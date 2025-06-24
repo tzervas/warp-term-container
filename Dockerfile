@@ -35,13 +35,10 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
-# Copy GPG setup script and key
-COPY setup-gpg.sh /tmp/setup-gpg.sh
-COPY warp-ai.key /tmp/warp-ai.key
-RUN chown $USERNAME:$USERNAME /tmp/setup-gpg.sh /tmp/warp-ai.key && \
-    chmod +x /tmp/setup-gpg.sh && \
-    sudo -u $USERNAME /tmp/setup-gpg.sh && \
-    rm /tmp/setup-gpg.sh
+# Create directories for user configuration
+RUN mkdir -p /home/$USERNAME/.gnupg /home/$USERNAME/.config /home/$USERNAME/.local/share/keyrings && \
+    chown -R $USERNAME:$USERNAME /home/$USERNAME/.gnupg /home/$USERNAME/.config /home/$USERNAME/.local && \
+    chmod 700 /home/$USERNAME/.gnupg
 
 USER $USERNAME
 WORKDIR /home/$USERNAME

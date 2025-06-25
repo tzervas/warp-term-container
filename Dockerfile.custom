@@ -1,5 +1,5 @@
 # Extend the base Warp Terminal image
-FROM ghcr.io/tzervas/warp-term-container:v0.1.0
+FROM ghcr.io/tzervas/warp-term-container:latest
 
 USER root
 

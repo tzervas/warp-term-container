@@ -18,13 +18,6 @@ check_requirements() {
 # Function to setup authentication based on method
 setup_auth() {
     echo "Setting up authentication..."
-    # Import GPG key
-    if gpg --list-secret-keys --keyid-format=long | grep -q "884E9E08D0C7DF6C"; then
-        echo "GPG key already imported"
-    else
-        echo "Error: GPG key not found"
-        exit 1
-    fi
     case "$AUTH_METHOD" in
         keyring)
             echo "Using system keyring for authentication..."

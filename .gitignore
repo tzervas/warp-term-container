@@ -42,3 +42,9 @@ Thumbs.db
 *.key
 *.pem
 *.env.local
+
+# Ignore container signature file
+container.sig
+
+# Ignore local push logs
+push.log

@@ -9,9 +9,13 @@ MIN_PASSWORD_LENGTH=16
 # Function to generate a secure random password
 generate_password() {
     local length=${1:-$MIN_PASSWORD_LENGTH}
-    # Generate password using /dev/urandom with base64 encoding
-    # Filter out potentially problematic characters
-    tr -dc 'A-Za-z0-9!#$%&()*+,-./:;<=>?@[\]^_`{|}~' < /dev/urandom | head -c "$length"
+    # Generate password using /dev/urandom, filtering out problematic shell metacharacters
+    # Exclude: backtick (`), single quote ('), double quote ("), dollar ($), backslash (\), and space
+    # Allowed: A-Za-z0-9!#$%\&()*+,-./:;<=>?@[]^_{|}~
+    tr -dc 'A-Za-z0-9!#$%\&()*+,-./:;<=>?@[]^_{|}~' < /dev/urandom | head -c "$length"
+    if [[ "$length" -lt 32 ]]; then
+        echo "Warning: Password excludes certain shell metacharacters for safety." >&2
+    fi
 }
 
 # Function to create a new user
@@ -35,7 +39,7 @@ create_user() {
     touch "$USERS_FILE"
     
     # Check if user already exists
-    if grep -q "^$username:" "$USERS_FILE" 2>/dev/null; then
+    if grep -Fq "^$username:" "$USERS_FILE" 2>/dev/null; then
         echo "Error: User $username already exists"
         exit 1
     fi
@@ -44,8 +48,9 @@ create_user() {
     local hashed_entry
     hashed_entry=$(htpasswd -nbB "$username" "$password")
     
-    # Backup current file
-    cp "$USERS_FILE" "$USERS_FILE_BACKUP"
+    # Backup current file with timestamp to avoid overwriting
+    timestamp=$(date +"%Y%m%d_%H%M%S")
+    cp "$USERS_FILE" "${USERS_FILE_BACKUP}.${timestamp}"
     
     # Add new user
     echo "$hashed_entry" >> "$USERS_FILE"
@@ -82,11 +87,13 @@ rotate_password() {
     local new_hash
     new_hash=$(htpasswd -nbB "$username" "$new_password")
     
-    # Backup current file
-    cp "$USERS_FILE" "$USERS_FILE_BACKUP"
+    # Backup current file with timestamp to avoid overwriting
+    timestamp=$(date +"%Y%m%d_%H%M%S")
+    cp "$USERS_FILE" "${USERS_FILE_BACKUP}.${timestamp}"
     
     # Update password
-    sed -i "s|^$username:.*|$new_hash|" "$USERS_FILE"
+    escaped_username=$(printf "%s" "$username" | sed 's/[].[^$*\]/\\&/g')
+    sed -i "s|^$escaped_username:.*|$new_hash|" "$USERS_FILE"
     chmod 600 "$USERS_FILE"
     
     echo "Password rotated for user $username"
@@ -125,11 +132,13 @@ delete_user() {
         exit 1
     fi
     
-    # Backup current file
-    cp "$USERS_FILE" "$USERS_FILE_BACKUP"
+    # Backup current file with timestamp to avoid overwriting
+    timestamp=$(date +"%Y%m%d_%H%M%S")
+    cp "$USERS_FILE" "${USERS_FILE_BACKUP}.${timestamp}"
     
     # Remove user
-    sed -i "/^$username:/d" "$USERS_FILE"
+    escaped_username=$(printf "%s" "$username" | sed 's/[].[^$*\]/\\&/g')
+    sed -i "/^$escaped_username:/d" "$USERS_FILE"
     chmod 600 "$USERS_FILE"
     
     echo "User $username deleted successfully"

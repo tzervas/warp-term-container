@@ -48,3 +48,6 @@ container.sig
 
 # Ignore local push logs
 push.log
+
+# Ignore secrets
+secrets/traefik-users.txt

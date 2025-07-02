@@ -1,8 +1,12 @@
-version: "2.4"
+version: "3.8"
 
 services:
   warp-terminal:
-    build: ./docker/warp-terminal
+    build:
+      context: ./docker/warp-terminal
+      args:
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
     image: warp-terminal:1.0.0
     container_name: warp-terminal
     user: warpuser
@@ -14,15 +18,14 @@ services:
       - GPG_KEY=${GPG_KEY}
       - GPG_KEY_ID=${GPG_KEY_ID}
       - PROJECT_PATH=${PROJECT_PATH}
+      - USER_UID=${USER_UID:-1000}
+      - USER_GID=${USER_GID:-1000}
     volumes:
       - ${PROJECT_PATH:-./}:/home/warpuser/project:rw
       - ${HOME}/.gitconfig:/home/warpuser/.gitconfig:ro
       - ${HOME}/.gnupg:/home/warpuser/.gnupg:rw
-    deploy:
-      resources:
-        limits:
-          cpus: "0.4"
-          memory: "512M"
+    cpus: "0.4"
+    mem_limit: 512M
     networks:
       - web
 
@@ -32,7 +35,10 @@ services:
     command:
       - "--providers.docker=true"
       - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       - "--certificatesresolvers.le.acme.tlschallenge=true"
       - "--certificatesresolvers.le.acme.email=admin@vector-weight.click"
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"

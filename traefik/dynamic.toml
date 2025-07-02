@@ -1,7 +1,5 @@
 [http.middlewares.simpleAuth.basicAuth]
-  users = [
-    "warpuser:$2y$12$wBohBg10m2E3OVy1T0R9Be0gibssFgDdG9YlnRAMmyQm6XO1BcJCG"
-  ]
+  usersFile = "/run/secrets/traefik-users"
 
 [http.routers.warp-router]
   rule = "Host(\"vector-weight.click\")"

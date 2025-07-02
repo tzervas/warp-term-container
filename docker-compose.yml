@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Example service showing how to use the base image
   warp-terminal:
-    image: ghcr.io/tzervas/warp-term-container:v0.1.0
+    image: ghcr.io/tzervas/warp-term-container:1.0.0
     build:
       context: .
       args:
@@ -24,6 +24,7 @@ services:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - GITHUB_REPO=${GITHUB_REPO}
       - GPG_KEY=${GPG_KEY}
+      - GPG_KEY_ID=${GPG_KEY_ID}
       - PROJECT_PATH=${PROJECT_PATH}
       - ATLASSIAN_TOKEN=${ATLASSIAN_TOKEN}
       - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}

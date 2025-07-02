@@ -17,6 +17,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write  # For cosign OIDC signing
+      attestations: write  # For provenance attestations
 
     steps:
       - name: Checkout repository
@@ -42,10 +44,51 @@ jobs:
             type=semver,pattern={{major}}
             type=sha
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.1.1
+        with:
+          cosign-release: 'v2.2.0'
+
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+
+      - name: Configure cosign OIDC
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign initialize
+          cosign login --identity-token "$(cat ${ACTIONS_ID_TOKEN_REQUEST_TOKEN_PATH})"
+
+      - name: Sign container image
+        if: github.event_name != 'pull_request'
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          # Convert newline-separated tags to array
+          readarray -t tag_array <<< "$TAGS"
+          
+          # Build space-separated list of image references
+          images=""
+          for tag in "${tag_array[@]}"; do
+            # Trim whitespace and ensure tag is not empty
+            tag="$(echo -e "${tag}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            if [ -n "$tag" ]; then
+              images+="${tag}@${DIGEST} "
+            fi
+          done
+          
+          # Sign all images
+          if [ -n "$images" ]; then
+            cosign sign --yes ${images}
+          else
+            echo "No valid image tags found to sign"
+            exit 1
+          fi

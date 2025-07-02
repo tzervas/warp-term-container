@@ -1,18 +1,39 @@
 #!/bin/bash
 set -e
 
+# Source our utility scripts
+source /home/warp/scripts/validate_env.sh
+source /home/warp/scripts/setup_gpg.sh
+
 # Set GPG Home
 export GNUPGHOME=/home/warp/.gnupg
+
+# Validate environment variables first
+echo "Validating environment..."
+validate_environment || exit 1
+
+# Setup GPG
+echo "Setting up GPG..."
+setup_gpg || exit 1
 
 # Function to check required tools
 check_requirements() {
     echo "Checking required tools..."
-    for cmd in git gpg gh secret-tool; do
-        if ! command -v $cmd &> /dev/null; then
-            echo "Error: $cmd is not installed"
-            exit 1
+    local missing_tools=()
+    local required_tools=("git" "gpg" "gh" "secret-tool")
+    
+    for tool in "${required_tools[@]}"; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            missing_tools+=("$tool")
         fi
     done
+    
+    if [ ${#missing_tools[@]} -ne 0 ]; then
+        echo "Error: Missing required tools: ${missing_tools[*]}"
+        exit 1
+    fi
+    
+    echo "All required tools are available"
 }
 
 # Function to setup authentication based on method

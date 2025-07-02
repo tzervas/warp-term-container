@@ -13,6 +13,79 @@ services:
     restart: unless-stopped
     environment:
       - AUTH_METHOD=${AUTH_METHOD:-keyring}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - PROJECT_PATH=${PROJECT_PATH}
+      - USER_UID=${USER_UID:-1000}
+      - USER_GID=${USER_GID:-1000}
+    secrets:
+      - github-token
+      - gpg-key
+      - gpg-key-id
+    volumes:
+      - ${PROJECT_PATH:-./}:/home/warpuser/project:rw
+      - ${HOME}/.gitconfig:/home/warpuser/.gitconfig:ro
+    cpus: "0.4"
+    mem_limit: 512M
+    networks:
+      - web
+
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    command:
+      - "--providers.docker=true"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.le.acme.tlschallenge=true"
+      - "--certificatesresolvers.le.acme.email=admin@vector-weight.click"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt
+      - ./traefik:/etc/traefik/dynamic:ro
+    secrets:
+      - traefik-users
+    networks:
+      - web
+
+networks:
+  web:
+    name: warp_web
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+secrets:
+  github-token:
+    file: ./secrets/github-token.txt
+  gpg-key:
+    file: ./secrets/gpg-key.txt
+  gpg-key-id:
+    file: ./secrets/gpg-key-id.txt
+  traefik-users:
+    file: ./secrets/traefik-users.txt
+
+services:
+  warp-terminal:
+    build:
+      context: ./docker/warp-terminal
+      args:
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+    image: warp-terminal:1.0.0
+    container_name: warp-terminal
+    user: warpuser
+    restart: unless-stopped
+    environment:
+      - AUTH_METHOD=${AUTH_METHOD:-keyring}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - GITHUB_REPO=${GITHUB_REPO}
       - GPG_KEY=${GPG_KEY}

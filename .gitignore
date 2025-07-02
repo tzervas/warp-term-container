@@ -50,4 +50,5 @@ container.sig
 push.log
 
 # Ignore secrets
-secrets/traefik-users.txt
+secrets/*.txt
+!secrets/*.example

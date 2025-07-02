@@ -24,20 +24,26 @@ check_requirements() {
 # Function to setup authentication
 setup_auth() {
     echo "Setting up authentication..."
-    # Configure git with GPG key if provided
-    if [ -n "$GPG_KEY" ]; then
-        echo "$GPG_KEY" | gpg --import --batch
+    # Configure git with GPG key from secrets
+    if [ -f "/run/secrets/gpg-key" ]; then
+        cat "/run/secrets/gpg-key" | gpg --import --batch
         if [ $? -ne 0 ]; then
-            echo "Failed to import GPG key"
+            echo "Failed to import GPG key from secret"
             exit 1
         fi
     fi
 
-    # Configure GitHub CLI with token
-    if [ -n "$GITHUB_TOKEN" ]; then
-        echo "$GITHUB_TOKEN" | gh auth login --with-token
+    # Set GPG key ID from secret
+    if [ -f "/run/secrets/gpg-key-id" ]; then
+        export GPG_KEY_ID=$(cat "/run/secrets/gpg-key-id")
+        git config --global user.signingkey "$GPG_KEY_ID"
+    fi
+
+    # Configure GitHub CLI with token from secret
+    if [ -f "/run/secrets/github-token" ]; then
+        cat "/run/secrets/github-token" | gh auth login --with-token
         if [ $? -ne 0 ]; then
-            echo "Failed to authenticate with GitHub"
+            echo "Failed to authenticate with GitHub using secret"
             exit 1
         fi
     fi
@@ -50,7 +56,7 @@ setup_project() {
         PROJECT_DIR="/home/warpuser/project"
         
         # Check if project directory exists and is not empty
-        if [ -d "$PROJECT_DIR" ] && [ "$(ls -A $PROJECT_DIR)" ]; then
+        if [ -d "$PROJECT_DIR" ] && [ "$(ls -A "$PROJECT_DIR")" ]; then
             echo "Project directory already exists and is not empty"
             if [ -d "$PROJECT_DIR/.git" ]; then
                 echo "Git repository already exists, updating..."

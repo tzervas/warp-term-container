@@ -10,7 +10,6 @@
 
 [tls]
 
-[certificatesResolvers.le.acme]
-  email = "admin@vector-weight.click"
-  storage = "/letsencrypt/acme.json"
-  tlsChallenge = true
+[tls.options]
+  [tls.options.default]
+    minVersion = "VersionTLS12"

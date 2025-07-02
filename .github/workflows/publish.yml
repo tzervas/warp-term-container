@@ -66,8 +66,23 @@ jobs:
           TAGS: ${{ steps.meta.outputs.tags }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
+          # Convert newline-separated tags to array
+          readarray -t tag_array <<< "$TAGS"
+          
+          # Build space-separated list of image references
           images=""
-          for tag in ${TAGS}; do
-            images+="${tag}@${DIGEST} "
+          for tag in "${tag_array[@]}"; do
+            # Trim whitespace and ensure tag is not empty
+            tag="$(echo -e "${tag}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            if [ -n "$tag" ]; then
+              images+="${tag}@${DIGEST} "
+            fi
           done
-          cosign sign --yes ${images}
+          
+          # Sign all images
+          if [ -n "$images" ]; then
+            cosign sign --yes ${images}
+          else
+            echo "No valid image tags found to sign"
+            exit 1
+          fi

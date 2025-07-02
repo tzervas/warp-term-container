@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Example service showing how to use the base image
   warp-terminal:
-    image: ghcr.io/tzervas/warp-term-container:latest
+    image: ghcr.io/tzervas/warp-term-container:1.0.0
     build:
       context: .
       args:

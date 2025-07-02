@@ -5,7 +5,7 @@ set -e
 check_requirements() {
     echo "Checking required tools..."
     local missing_tools=()
-    local required_tools=("git" "gpg" "gh" "ttyd")
+    local required_tools=("git" "gpg" "gh" "ttyd" "htpasswd")
     
     for tool in "${required_tools[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then

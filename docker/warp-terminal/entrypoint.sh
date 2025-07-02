@@ -1,26 +1,11 @@
 #!/bin/bash
 set -e
 
-# Source our utility scripts
-source /home/warp/scripts/validate_env.sh
-source /home/warp/scripts/setup_gpg.sh
-
-# Set GPG Home
-export GNUPGHOME=/home/warp/.gnupg
-
-# Validate environment variables first
-echo "Validating environment..."
-validate_environment || exit 1
-
-# Setup GPG
-echo "Setting up GPG..."
-setup_gpg || exit 1
-
 # Function to check required tools
 check_requirements() {
     echo "Checking required tools..."
     local missing_tools=()
-    local required_tools=("git" "gpg" "gh" "secret-tool")
+    local required_tools=("git" "gpg" "gh" "ttyd" "htpasswd")
     
     for tool in "${required_tools[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then
@@ -36,78 +21,70 @@ check_requirements() {
     echo "All required tools are available"
 }
 
-# Function to setup authentication based on method
+# Function to setup authentication
 setup_auth() {
     echo "Setting up authentication..."
-    case "$AUTH_METHOD" in
-        keyring)
-            echo "Using system keyring for authentication..."
-            # Verify keyring access
-            if ! secret-tool lookup test test &>/dev/null; then
-                echo "Warning: Unable to access system keyring"
-            fi
-            ;;
-        env)
-            echo "Using environment variables for authentication..."
-            # Set up GPG key if provided
-            if [ -n "$GPG_KEY" ]; then
-                echo "$GPG_KEY" | gpg --import
-            fi
-            # Configure git with provided credentials
-            if [ -n "$GITHUB_TOKEN" ]; then
-                gh auth login --with-token <<< "$GITHUB_TOKEN"
-            fi
-            ;;
-        file)
-            echo "Using file-based authentication..."
-            if [ -f "/run/secrets/github_token" ]; then
-                gh auth login --with-token < /run/secrets/github_token
-            fi
-            if [ -f "/run/secrets/gpg_key" ]; then
-                gpg --import /run/secrets/gpg_key
-            fi
-            ;;
-        *)
-            echo "Invalid AUTH_METHOD specified"
+    # Configure git with GPG key from secrets
+    if [ -f "/run/secrets/gpg-key" ]; then
+        cat "/run/secrets/gpg-key" | gpg --import --batch
+        if [ $? -ne 0 ]; then
+            echo "Failed to import GPG key from secret"
             exit 1
-            ;;
-    esac
+        fi
+    fi
+
+    # Set GPG key ID from secret
+    if [ -f "/run/secrets/gpg-key-id" ]; then
+        export GPG_KEY_ID=$(cat "/run/secrets/gpg-key-id")
+        git config --global user.signingkey "$GPG_KEY_ID"
+    fi
+
+    # Configure GitHub CLI with token from secret
+    if [ -f "/run/secrets/github-token" ]; then
+        cat "/run/secrets/github-token" | gh auth login --with-token
+        if [ $? -ne 0 ]; then
+            echo "Failed to authenticate with GitHub using secret"
+            exit 1
+        fi
+    fi
 }
 
 # Function to setup project
 setup_project() {
     if [ -n "$GITHUB_REPO" ]; then
-        echo "Cloning repository $GITHUB_REPO..."
-        gh repo clone "$GITHUB_REPO" /home/warp/project
-        cd /home/warp/project
+        echo "Setting up repository $GITHUB_REPO..."
+        PROJECT_DIR="/home/warpuser/project"
+        
+        # Check if project directory exists and is not empty
+        if [ -d "$PROJECT_DIR" ] && [ "$(ls -A "$PROJECT_DIR")" ]; then
+            echo "Project directory already exists and is not empty"
+            if [ -d "$PROJECT_DIR/.git" ]; then
+                echo "Git repository already exists, updating..."
+                cd "$PROJECT_DIR"
+                git pull
+            else
+                echo "Warning: Project directory contains files but is not a git repository"
+                echo "Using existing directory without cloning"
+            fi
+        else
+            echo "Cloning repository..."
+            rm -rf "$PROJECT_DIR"
+            gh repo clone "$GITHUB_REPO" "$PROJECT_DIR"
+        fi
+        cd "$PROJECT_DIR"
     elif [ -n "$PROJECT_PATH" ]; then
         echo "Using existing project at $PROJECT_PATH..."
         cd "$PROJECT_PATH"
     else
         echo "No project specified"
-        exit 1
+        cd /home/warpuser
     fi
 }
 
-# Setup authentication
+# Main execution
+check_requirements
 setup_auth
-
-# Ensure UV virtual environment is active
-uv venv
-source .venv/bin/activate
-
-# Setup project
 setup_project
 
-# Install project dependencies if pyproject.toml exists
-if [ -f "pyproject.toml" ]; then
-    echo "Installing project dependencies..."
-    uv pip install -e ".[dev]"
-fi
-
-# Execute command if provided, otherwise start shell
-if [ $# -gt 0 ]; then
-    exec "$@"
-else
-    exec /bin/bash
-fi
+# Start ttyd
+exec ttyd --port 7681 --permit-write bash

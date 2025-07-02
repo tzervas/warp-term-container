@@ -48,3 +48,7 @@ container.sig
 
 # Ignore local push logs
 push.log
+
+# Ignore secrets
+secrets/*.txt
+!secrets/*.example

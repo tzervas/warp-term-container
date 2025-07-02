@@ -1,58 +1,49 @@
-FROM python:3.12-slim-bookworm
+FROM debian:bullseye-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install essential packages and security updates
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
     apache2-utils \
-    git \
+    ca-certificates \
     curl \
-    gpg \
-    gnupg2 \
-    sudo \
-    libsecret-tools \
-    build-essential \
-    python3-dev
+    git \
+    gnupg \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Install UV
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    cp /root/.local/bin/uv /usr/local/bin/ && \
-    cp /root/.local/bin/uvx /usr/local/bin/
+# Install ttyd with checksum verification
+RUN curl -fsSL https://github.com/tsl0922/ttyd/releases/download/1.7.3/ttyd.x86_64 -o /usr/local/bin/ttyd && \
+    echo "b557d32bd5a67adcf2020825f3b0203499de1b2358d21ed6ed168e589efbdbf5  /usr/local/bin/ttyd" | sha256sum -c - && \
+    chmod +x /usr/local/bin/ttyd
 
 # Install GitHub CLI
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-    && apt-get update \
-    && apt-get install -y gh \
-    && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y gh && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -f /etc/apt/sources.list.d/github-cli.list /usr/share/keyrings/githubcli-archive-keyring.gpg
 
 # Create non-root user
-ARG USERNAME=warp
 ARG USER_UID=1000
-ARG USER_GID=$USER_UID
+ARG USER_GID=1000
+RUN groupadd -g ${USER_GID} warpuser && \
+    useradd -u ${USER_UID} -g ${USER_GID} -m -s /bin/bash warpuser
 
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME
-
-# Create directories for user configuration
-RUN mkdir -p /home/$USERNAME/.gnupg /home/$USERNAME/.config /home/$USERNAME/.local/share/keyrings && \
-    chown -R $USERNAME:$USERNAME /home/$USERNAME/.gnupg /home/$USERNAME/.config /home/$USERNAME/.local && \
-    chmod 700 /home/$USERNAME/.gnupg
-
-USER $USERNAME
-WORKDIR /home/$USERNAME
+# Set up GPG directory
+RUN mkdir -p /home/warpuser/.gnupg && \
+    chown -R warpuser:warpuser /home/warpuser/.gnupg && \
+    chmod 700 /home/warpuser/.gnupg
 
 # Copy entrypoint script
-COPY --chown=$USERNAME:$USERNAME entrypoint.sh /home/$USERNAME/entrypoint.sh
-RUN chmod +x /home/$USERNAME/entrypoint.sh
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    UV_HOME=/home/$USERNAME/.uv \
-    PATH=/home/$USERNAME/.uv/bin:/home/$USERNAME/.local/bin:$PATH \
-    GPG_TTY=/dev/pts/0
+USER warpuser
+WORKDIR /home/warpuser
 
-ENTRYPOINT ["/home/warp/entrypoint.sh"]
+# Expose ttyd port
+EXPOSE 7681
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

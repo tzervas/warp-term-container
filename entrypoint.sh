@@ -8,6 +8,14 @@ source /home/warp/scripts/setup_gpg.sh
 # Set GPG Home
 export GNUPGHOME=/home/warp/.gnupg
 
+# Validate environment variables first
+echo "Validating environment..."
+validate_environment || exit 1
+
+# Setup GPG
+echo "Setting up GPG..."
+setup_gpg || exit 1
+
 # Function to check required tools
 check_requirements() {
     echo "Checking required tools..."

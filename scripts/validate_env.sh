@@ -5,6 +5,7 @@ REQUIRED_VARS=(
     "AUTH_METHOD"
     "GITHUB_TOKEN"
     "GITHUB_REPO"
+    "GPG_KEY_ID"
 )
 
 # Optional environment variables with their default values

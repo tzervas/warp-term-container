@@ -60,6 +60,12 @@ jobs:
           provenance: true
           sbom: true
 
+      - name: Configure cosign OIDC
+        if: github.event_name != 'pull_request'
+        run: |
+          cosign initialize
+          cosign login --identity-token "$(cat ${ACTIONS_ID_TOKEN_REQUEST_TOKEN_PATH})"
+
       - name: Sign container image
         if: github.event_name != 'pull_request'
         env:

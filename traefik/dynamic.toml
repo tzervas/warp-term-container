@@ -1,0 +1,18 @@
+[http.middlewares.simpleAuth.basicAuth]
+  users = [
+    "warpuser:$2y$12$wBohBg10m2E3OVy1T0R9Be0gibssFgDdG9YlnRAMmyQm6XO1BcJCG"
+  ]
+
+[http.routers.warp-router]
+  rule = "Host(\"vector-weight.click\")"
+  service = "warp-terminal"
+
+[http.services.warp-terminal.loadBalancer]
+  servers = [{ url = "http://warp-terminal:7681" }]
+
+[tls]
+
+[certificatesResolvers.le.acme]
+  email = "admin@vector-weight.click"
+  storage = "/letsencrypt/acme.json"
+  tlsChallenge = true

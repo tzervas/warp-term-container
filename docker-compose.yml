@@ -1,24 +1,12 @@
-version: '3.8'
+version: "2.4"
 
 services:
-  # Example service showing how to use the base image
   warp-terminal:
-    image: ghcr.io/tzervas/warp-term-container:1.0.0
-    build:
-      context: .
-      args:
-        USER_UID: ${UID:-1000}
-        USER_GID: ${GID:-1000}
-      # Uncomment to build a custom image
-      # dockerfile: Dockerfile.custom
-    volumes:
-      # Project volume (if using local project)
-      - ${PROJECT_PATH:-./}:/home/warp/project:rw
-      # Authentication volumes
-      - ${HOME}/.gitconfig-warp-ai:/home/warp/.gitconfig:ro
-      # Secret-tool socket and keyring
-      - /run/user/${UID:-1000}/keyring:/run/user/${UID:-1000}/keyring:rw
-      - ${HOME}/.local/share/keyrings:/home/warp/.local/share/keyrings:rw
+    build: ./docker/warp-terminal
+    image: warp-terminal:1.0.0
+    container_name: warp-terminal
+    user: warpuser
+    restart: unless-stopped
     environment:
       - AUTH_METHOD=${AUTH_METHOD:-keyring}
       - GITHUB_TOKEN=${GITHUB_TOKEN}
@@ -26,11 +14,35 @@ services:
       - GPG_KEY=${GPG_KEY}
       - GPG_KEY_ID=${GPG_KEY_ID}
       - PROJECT_PATH=${PROJECT_PATH}
-      - ATLASSIAN_TOKEN=${ATLASSIAN_TOKEN}
-      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
-      - CONFLUENCE_DOMAIN=${CONFLUENCE_DOMAIN}
-    init: true
-    command: ["bash", "-c", "chown -R warp:warp /home/warp/.gnupg && exec /home/warp/entrypoint.sh"]
-    tty: true
-    stdin_open: true
+    volumes:
+      - ${PROJECT_PATH:-./}:/home/warpuser/project:rw
+      - ${HOME}/.gitconfig:/home/warpuser/.gitconfig:ro
+      - ${HOME}/.gnupg:/home/warpuser/.gnupg:rw
+    deploy:
+      resources:
+        limits:
+          cpus: "0.4"
+          memory: "512M"
+    networks:
+      - web
+
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    command:
+      - "--providers.docker=true"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.tlschallenge=true"
+      - "--certificatesresolvers.le.acme.email=admin@vector-weight.click"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt
+      - ./traefik:/etc/traefik/dynamic:ro
+    networks:
+      - web
 

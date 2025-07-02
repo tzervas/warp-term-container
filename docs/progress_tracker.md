@@ -3,15 +3,18 @@
 ## Phase 1: Core Functionality
 
 ### Authentication Implementation
-- [ ] Choose authentication method:
-  - [ ] Option A: Basic Auth
-    - [ ] Generate secure credentials
-    - [ ] Configure Traefik middleware
-    - [ ] Test credential rotation
-  - [ ] Option B: Keycloak SSO
-    - [ ] Deploy Keycloak container
-    - [ ] Configure OIDC middleware
-    - [ ] Set up user management
+- [x] Choose authentication method: Basic Auth selected for MVP
+- [ ] Basic Auth Implementation
+  - [ ] Create secure credential generation script
+  - [ ] Configure Traefik basic auth middleware
+  - [ ] Document credential rotation process
+  - [ ] Implement credential backup strategy
+
+### Future Authentication (Post-MVP)
+- [ ] Keycloak SSO Integration
+  - [ ] Deploy Keycloak container
+  - [ ] Configure OIDC middleware
+  - [ ] Set up user management
 
 ### DNS and TLS Setup
 - [ ] DNS Configuration

@@ -18,8 +18,7 @@ setup_gpg() {
     # If GPG_KEY is provided, attempt to import it
     if [ -n "$GPG_KEY" ]; then
         echo "Importing GPG key..."
-        echo "$GPG_KEY" | gpg --import --batch
-        if [ $? -ne 0 ]; then
+        if ! echo "$GPG_KEY" | gpg --import --batch; then
             echo "Failed to import GPG key"
             return 1
         fi

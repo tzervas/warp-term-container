@@ -26,8 +26,7 @@ setup_auth() {
     echo "Setting up authentication..."
     # Configure git with GPG key from secrets
     if [ -f "/run/secrets/gpg-key" ]; then
-        cat "/run/secrets/gpg-key" | gpg --import --batch
-        if [ $? -ne 0 ]; then
+        if ! gpg --import --batch < "/run/secrets/gpg-key"; then
             echo "Failed to import GPG key from secret"
             exit 1
         fi
@@ -35,14 +34,14 @@ setup_auth() {
 
     # Set GPG key ID from secret
     if [ -f "/run/secrets/gpg-key-id" ]; then
-        export GPG_KEY_ID=$(cat "/run/secrets/gpg-key-id")
+        GPG_KEY_ID=$(cat "/run/secrets/gpg-key-id")
+        export GPG_KEY_ID
         git config --global user.signingkey "$GPG_KEY_ID"
     fi
 
     # Configure GitHub CLI with token from secret
     if [ -f "/run/secrets/github-token" ]; then
-        cat "/run/secrets/github-token" | gh auth login --with-token
-        if [ $? -ne 0 ]; then
+        if ! gh auth login --with-token < "/run/secrets/github-token"; then
             echo "Failed to authenticate with GitHub using secret"
             exit 1
         fi

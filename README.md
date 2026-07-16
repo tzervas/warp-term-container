@@ -90,12 +90,14 @@ See `Dockerfile.custom` for an example of how to extend the base image with your
 
 ## Directory Structure
 
-- `.devcontainer/`: VSCode development container configuration
-- `docker-compose.yml`: Container orchestration configuration
-- `Dockerfile`: Container image definition
-- `entrypoint.sh`: Container initialization script
-- `setup.sh`: Environment setup script
-- `setup-gpg.sh`: GPG key setup script
+- `docker/warp-terminal/`: ttyd-based service image (Dockerfile + entrypoint)
+- `docker-compose.yml`: Container orchestration (warp-terminal + Traefik)
+- `Dockerfile`: Optional Python base image (GHCR publish target)
+- `entrypoint.sh`: Root image initialization script
+- `scripts/`: Auth, GPG, and env validation helpers
+- `setup.sh`: Host-side environment setup script
+- `setup-gpg.sh`: Host-side GPG key setup helper
+- `traefik/`: Reverse proxy dynamic config and ACME storage
 
 ## Security Notes
 
